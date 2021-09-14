@@ -28,6 +28,7 @@ private let kGDataXMLXPathDefaultNamespacePrefix = "_def_ns".cString(using: .utf
 private let GDATAXMLNODE_DEFINE_GLOBALS = 1
 private let kGDataXMLParseOptions = Int32(XML_PARSE_NOCDATA.rawValue | XML_PARSE_NOBLANKS.rawValue)
 private let kGDataHTMLParseOptions = Int32(HTML_PARSE_NOWARNING.rawValue | HTML_PARSE_NOERROR.rawValue)
+private let kGDataXMLParseRecoverOptions = Int32(XML_PARSE_NOCDATA.rawValue) | Int32(XML_PARSE_NOBLANKS.rawValue) | Int32(XML_PARSE_RECOVER.rawValue)
     
 public class XmlCharKey : Hashable, Equatable, CustomStringConvertible, NSCopying {
     
@@ -221,8 +222,8 @@ public class GDataXMLNode : Hashable, NSCopying  {
     // later when adding the node to a tree with addChild: or addAttribute:.
     // See fixUpNamespacesForNode:.
     
-    var xmlNode_ : xmlNodePtr?; // may also be an xmlAttrPtr or xmlNsPtr
-    var shouldFreeXMLNode_ : Bool; // if yes, xmlNode_ will be free'd in dealloc
+    public var xmlNode_ : xmlNodePtr?; // may also be an xmlAttrPtr or xmlNsPtr
+    public var shouldFreeXMLNode_ : Bool; // if yes, xmlNode_ will be free'd in dealloc
     
     // cached values
     var cachedName_ : String?;
@@ -244,7 +245,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
     // the namespace prefix and replace it with a proper ns
     // pointer.
     
-    public static func elementWithName(name: String) -> GDataXMLNode? {
+    public static func element(withName name: String) -> GDataXMLNode? {
         if let theNewNode = xmlNewNode(nil, name) {
             // succeeded
             return nodeConsuming(xmlNode: theNewNode);
@@ -252,7 +253,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return nil;
     }
     
-    public static func elementWithName(name: String, stringValue: String) -> GDataXMLNode? {
+    public static func element(withName name: String, stringValue: String) -> GDataXMLNode? {
         if let theNewNode = xmlNewNode(nil, name) {
             if let textNode = xmlNewText(stringValue) {
                 if xmlAddChild(theNewNode, textNode) != nil {
@@ -267,7 +268,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return nil;
     }
     
-    public static func elementWithName(name: String, theURI: String) -> GDataXMLNode? {
+    public static func element(withName name: String, theURI: String) -> GDataXMLNode? {
         // since we don't know a prefix yet, shove in the whole URI; we'll look for
         // a proper namespace ptr later when addChild calls fixUpNamespacesForNode
     
@@ -279,7 +280,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return nil;
     }
     
-    public static func attributeWith(name: String, value: String) -> GDataXMLNode? {
+    public static func attribute(withName name: String, stringValue value: String) -> GDataXMLNode? {
         
         if let theNewAttr = xmlNewProp(nil, name, value) {
             return theNewAttr.withMemoryRebound(to: xmlNode.self, capacity: 1, { node in
@@ -289,7 +290,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return nil;
     }
     
-    public static func attributeWithName(name: String, URI: String, value: String) -> GDataXMLNode? {
+    public static func attribute(withName name: String, URI: String, value: String) -> GDataXMLNode? {
         // since we don't know a prefix yet, shove in the whole URI; we'll look for
         // a proper namespace ptr later when addChild calls fixUpNamespacesForNode
         let fakeQName = GDataFakeQNameFor(URI: URI, name: name);
@@ -310,7 +311,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return nil;
     }
     
-    public static func namespaceWithName(name: String?, value: String) -> GDataXMLNode? {
+    public static func namespace(withName name: String?, stringValue value: String) -> GDataXMLNode? {
         if name != nil && name!.count > 0 {
             if let theNewNs = xmlNewNs(nil, value, name) {
                 return theNewNs.withMemoryRebound(to: xmlNode.self, capacity: 1, { node in
@@ -460,7 +461,7 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return str;
     }
     
-    public func XMLString() -> String? {
+    public func xmlString() -> String? {
         var str : String?;
         if (xmlNode_ != nil) {
             if let buff = xmlBufferCreate() {
@@ -663,31 +664,22 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return .InvalidKind;
     }
     
-    public func firstNodeForXPath(xpath: String) -> (node: GDataXMLNode?, error: Error?) {
-        let result = self.nodesFor(XPath:xpath);
-        if result.nodes == nil || result.nodes!.count == 0 {
-            return (nil, result.error);
-        }
-        return (result.nodes![0], nil);
+    public func firstNode(forXPath xpath: String) throws -> GDataXMLNode? {
+        return try nodes(forXPath:xpath).first
     }
     
-    public func nodesFor(XPath xpath: String) -> (nodes: Array<GDataXMLNode>?, error: Error?) {
+    public func nodes(forXPath xpath: String) throws -> [GDataXMLNode] {
         // call through with no explicit namespace dictionary; that will register the
         // root node's namespaces
-        return self.nodesFor(XPath:xpath, namespaces:nil);
+        return try nodes(forXPath:xpath, namespaces:nil)
     }
     
-    public func firstNodeFor(XPath xpath:String, namespaces: Dictionary<String, String>) -> (node: GDataXMLNode?, error: Error?)
-    {
-        let result = self.nodesFor(XPath:xpath, namespaces: namespaces);
-        if result.nodes == nil || result.nodes!.count == 0 {
-            return (nil, result.error);
-        }
-        return (result.nodes![0], nil);
+    public func firstNode(forXPath xpath: String, namespaces: Dictionary<String, String>) throws -> GDataXMLNode? {
+        return try nodes(forXPath: xpath, namespaces: namespaces).first
     }
     
-    public func nodesFor(XPath xpath: String, namespaces: Dictionary<String, String>?) -> (nodes: Array<GDataXMLNode>?, error: Error?) {
-        var array : Array<GDataXMLNode>? =  nil;
+    public func nodes(forXPath xpath: String, namespaces: Dictionary<String, String>?) throws -> [GDataXMLNode] {
+        var array : Array<GDataXMLNode>? = nil;
         var errorCode = -1;
         var errorInfo : Dictionary<String, String>? = nil;
     
@@ -755,25 +747,24 @@ public class GDataXMLNode : Hashable, NSCopying  {
             // not a valid node for using XPath
             errorInfo = ["error": "invalid node"];
         }
-        
-        var error : Error? = nil;
-    
-        if (array == nil) {
-            error = NSError(domain:"com.google.GDataXML", code: errorCode, userInfo: errorInfo);
+
+        if let array = array {
+            if tempDoc != nil {
+                xmlUnlinkNode(topParent)
+                xmlSetTreeDoc(topParent, nil)
+                xmlFreeDoc(tempDoc)
+            }
+            return array
         }
-    
-        if (tempDoc != nil) {
-            xmlUnlinkNode(topParent);
-            xmlSetTreeDoc(topParent, nil);
-            xmlFreeDoc(tempDoc);
+        else {
+            throw NSError(domain:"com.google.GDataXML", code: errorCode, userInfo: errorInfo)
         }
-        return (array, error);
     }
     
     public var description: String? {
         let nodeType = xmlNode_ != nil ? Int(xmlNode_!.pointee.type.rawValue) : -1;
         //TODO: add class and memory address
-        return "{type:\(nodeType) name:\(String(describing: self.name()))xml:\"\(String(describing: self.XMLString()))\"}"
+        return "{type:\(nodeType) name:\(String(describing: self.name()))xml:\"\(String(describing: self.xmlString()))\"}"
     }
     
     public func copy(with zone: NSZone? = nil) -> Any {
@@ -800,7 +791,6 @@ public class GDataXMLNode : Hashable, NSCopying  {
         return lhs.isEqual(rhs)
     }
 
-    #if swift(>=5)
     public func hash(into hasher: inout Hasher) {
         if let xmlNode = xmlNode_, xmlStrlen(xmlNode.pointee.name) >= 4 {
             return xmlNode.pointee.name.withMemoryRebound(to: UInt32.self, capacity: 1) { hash in
@@ -808,17 +798,6 @@ public class GDataXMLNode : Hashable, NSCopying  {
             }
         }
     }
-    #else
-    public var hashValue: Int {
-        guard let xmlNode = xmlNode_, xmlStrlen(xmlNode.pointee.name) >= 4 else {
-            return 0
-        }
-
-        return xmlNode.pointee.name.withMemoryRebound(to: UInt32.self, capacity: 1) { hash in
-            return Int(hash.pointee)
-        }
-    }
-    #endif
     
     internal func XMLNodeCopy() -> xmlNodePtr? {
         if (xmlNode_ != nil) {
@@ -857,67 +836,52 @@ public class GDataXMLElement : GDataXMLNode {
         super.init(xmlNode: theXMLNode, shouldFreeXMLNode: false);
     }
     
-    public init?(xmlString str:String, error: inout Error?) {
+    public init(xmlString str:String, recoverOnErrors: Bool = false) throws {
         guard let utf8Str = str.cString(using: String.Encoding.utf8) else {
-            return nil
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil)
         }
         var xmlNode: xmlNodePtr? = nil;
         // NOTE: We are assuming a string length that fits into an int
-        let doc = xmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
-            nil, // encoding
-            kGDataXMLParseOptions);
-        if (doc == nil) {
-            if (error != nil) {
-                // TODO(grobbins) use xmlSetGenericErrorFunc to capture error
-            }
-        } else {
+        let flags = recoverOnErrors ? kGDataXMLParseRecoverOptions : kGDataXMLParseOptions
+        if let doc = xmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
+                                   nil, // encoding
+                                   flags) {
             // copy the root node from the doc
             if let root = xmlDocGetRootElement(doc) {
                 // 1: recursive
-                xmlNode = xmlCopyNode(root, 1);
+                xmlNode = xmlCopyNode(root, 1)
             }
-            xmlFreeDoc(doc);
+            xmlFreeDoc(doc)
         }
     
         if (xmlNode == nil) {
             // failure
-            if (error != nil) {
-                error = NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil);
-            }
-            return nil;
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil)
         }
         else {
             super.init(xmlNode: xmlNode, shouldFreeXMLNode: true)
         }
     }
     
-    public init?(withHTMLString str: String, error: inout Error?) {
+    public init(withHTMLString str: String) throws {
         guard let utf8Str = str.cString(using: String.Encoding.utf8) else {
-            return nil
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil)
         }
         var xmlNode: xmlNodePtr? = nil;
         // NOTE: We are assuming a string length that fits into an int
-        let doc = htmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
-            nil, // encoding
-            kGDataHTMLParseOptions);
-        if (doc == nil) {
-            if (error != nil) {
-                // TODO(grobbins) use xmlSetGenericErrorFunc to capture error
-            }
-        } else {
+        if let doc = htmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
+                                    nil, // encoding
+                                    kGDataHTMLParseOptions) {
             // copy the root node from the doc
             if let root = xmlDocGetRootElement(doc) {
-                xmlNode = xmlCopyNode(root, 1); // 1: recursive
+                xmlNode = xmlCopyNode(root, 1) // 1: recursive
             }
-            xmlFreeDoc(doc);
+            xmlFreeDoc(doc)
         }
     
         if (xmlNode == nil) {
             // failure
-            if (error != nil) {
-                error = NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil);
-            }
-            return nil;
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil)
         }
         else {
             super.init(xmlNode: xmlNode, shouldFreeXMLNode: true)
@@ -949,7 +913,7 @@ public class GDataXMLElement : GDataXMLNode {
         return array;
     }
     
-    public func set(namespaces: Array<GDataXMLNode>) {
+    public func setNamespace(_ namespaces: Array<GDataXMLNode>) {
     
         if let safeXmlNode = xmlNode_ {
     
@@ -974,7 +938,7 @@ public class GDataXMLElement : GDataXMLNode {
         }
     }
     
-    public func add(namespace: GDataXMLNode) {
+    public func addNamespace(_ namespace: GDataXMLNode) {
         if let safeXmlNode = xmlNode_ {
             self.releaseCachedValues();
             
@@ -988,9 +952,9 @@ public class GDataXMLElement : GDataXMLNode {
         }
     }
     
-    public func add(child: GDataXMLNode) {
+    public func addChild(_ child: GDataXMLNode) {
         if (child.kind() == .AttributeKind) {
-            self.add(attribute:child);
+            self.addAttribute(child);
             return;
         }
     
@@ -998,7 +962,7 @@ public class GDataXMLElement : GDataXMLNode {
             self.releaseCachedValues();
             if let childNodeCopy = child.XMLNodeCopy() {
 
-                if xmlAddChild(xmlNode_, childNodeCopy) != nil {
+                if xmlAddChild(xmlNode_, childNodeCopy) == nil {
     
                     // failed to add
                     xmlFreeNode(childNodeCopy);
@@ -1179,7 +1143,7 @@ public class GDataXMLElement : GDataXMLNode {
         return array;
     }
     
-    public func add(attribute: GDataXMLNode) {
+    public func addAttribute(_ attribute: GDataXMLNode) {
     
         if let safeXmlNode = xmlNode_ {
     
@@ -1250,7 +1214,7 @@ public class GDataXMLElement : GDataXMLNode {
         return nil;
     }
     
-    public func attributeFor(name: String) -> GDataXMLNode? {
+    public func attribute(forName name: String) -> GDataXMLNode? {
     
         if let safeXmlNode = xmlNode_ {
             var attrPtr = xmlHasProp(safeXmlNode, name);
@@ -1549,60 +1513,57 @@ public class GDataXMLDocument {
     internal var cacheDict : Dictionary<XmlCharKey, String>?
     internal var _encoding :  String.Encoding?;
     
-    public convenience init?(xmlString: String, error: inout Error?) {
-        self.init(xmlString: xmlString, encoding: .utf8, error: &error);
+    public convenience init(xmlString: String) throws {
+        try self.init(xmlString: xmlString, encoding: .utf8);
     }
     
-    public convenience init?(data: Data, error: inout Error?) {
-        self.init(data: data, encoding: .utf8, error: &error);
+    public convenience init(data: Data) throws {
+        try self.init(data: data, encoding: .utf8, recoverOnErrors: false);
     }
     
-    public convenience init?(htmlString: String, error: inout Error?) {
-        self.init(htmlString: htmlString, encoding: .utf8, error: &error);
+    public convenience init(htmlString: String) throws {
+        try self.init(htmlString: htmlString, encoding: .utf8);
     }
     
-    public convenience init?(xmlString: String, encoding: String.Encoding, error: inout Error?) {
-        let data = xmlString.data(using: .utf8);
-        self.init(data:data, encoding:encoding, error:&error);
+    public convenience init(xmlString: String, encoding: String.Encoding) throws {
+        guard let data = xmlString.data(using: .utf8) else {
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil)
+        }
+        try self.init(data:data, encoding:encoding, recoverOnErrors: false)
     }
     
-    public convenience init?(htmlString: String, encoding: String.Encoding, error: inout Error?) {
-        let data = htmlString.data(using: .utf8);
-        self.init(htmlData:data, encoding:encoding, error:&error);
+    public convenience init(htmlString: String, encoding: String.Encoding) throws {
+        guard let data = htmlString.data(using: .utf8) else {
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil)
+        }
+        try self.init(htmlData:data, encoding:encoding)
     }
     
-    public init?(data: Data?, encoding: String.Encoding, error: inout Error?) {
+    public init(data: Data, encoding: String.Encoding, recoverOnErrors: Bool = false) throws {
         self._encoding = encoding;
     
         let xmlEncoding = IANAEncodingCStringFromNSStringEncoding(encoding);
-        guard let data = data else {
-            return nil
-        }
         // NOTE: We are assuming [data length] fits into an int.
         data.withUnsafeBytes { bytes in
             let bindedBytes = bytes.bindMemory(to: CChar.self).baseAddress
-            self.xmlDoc_ = xmlReadMemory(bindedBytes, Int32(data.count), nil, xmlEncoding, kGDataXMLParseOptions);
+            let flags = recoverOnErrors ? kGDataXMLParseRecoverOptions : kGDataXMLParseOptions
+            self.xmlDoc_ = xmlReadMemory(bindedBytes, Int32(data.count), nil, xmlEncoding, flags);
             // TODO(grobbins) map option values
         }
 
         if xmlDoc_ == nil {
-            error = NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil);
+            throw NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil);
             // TODO(grobbins) use xmlSetGenericErrorFunc to capture error
-            return nil;
         }
         else {
-            error = nil
             self.addStringsCacheToDoc();
         }
     }
     
-    public init?(htmlData: Data?, encoding: String.Encoding, error: inout Error?) {
+    public init(htmlData: Data, encoding: String.Encoding) throws {
         self._encoding = encoding;
         
         let xmlEncoding = IANAEncodingCStringFromNSStringEncoding(encoding);
-        guard let htmlData = htmlData else {
-            return nil
-        }
         // NOTE: We are assuming [data length] fits into an int.
         htmlData.withUnsafeBytes { bytes in
             let bindedBytes = bytes.bindMemory(to: CChar.self).baseAddress
@@ -1611,11 +1572,9 @@ public class GDataXMLDocument {
         }
         
         if (xmlDoc_ == nil) {
-            error = NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil);
+            throw  NSError(domain:"com.google.GDataXML", code:-1, userInfo:nil);
             // TODO(grobbins) use xmlSetGenericErrorFunc to capture error
-            return nil;
         } else {
-            error = nil;
             self.addStringsCacheToDoc();
         }
     }
@@ -1660,7 +1619,7 @@ public class GDataXMLDocument {
         return element;
     }
     
-    public func XMLData() -> Data? {
+    public func xmlData() -> Data? {
         if (xmlDoc_ != nil) {
             var buffer: UnsafeMutablePointer<xmlChar>? = nil;
             var bufferSize: Int32 = 0;
@@ -1704,20 +1663,15 @@ public class GDataXMLDocument {
         }
     }
     
-    public func nodesFor(XPath: String, error: inout Error?) -> Array<GDataXMLNode>? {
-        return self.nodesFor(XPath:XPath, namespaces:nil, error:&error);
+    public func nodes(forXPath XPath: String) throws -> [GDataXMLNode] {
+        return try self.nodes(forXPath: XPath, namespaces:nil)
     }
     
-    public func firstNodeFor(XPath: String, error: inout Error?) -> GDataXMLNode? {
-        if let nodes = self.nodesFor(XPath:XPath, error: &error) {
-            if nodes.count > 0 {
-                return nodes[0];
-            }
-        }
-        return nil;
+    public func firstNode(forXPath XPath: String) throws -> GDataXMLNode? {
+        return try self.nodes(forXPath: XPath).first
     }
     
-    public func nodesFor(XPath: String, namespaces: Dictionary<String, String>?, error: inout Error?) -> Array<GDataXMLNode>? {
+    public func nodes(forXPath XPath: String, namespaces: Dictionary<String, String>?) throws -> [GDataXMLNode] {
         var array : Array<GDataXMLNode>? = nil;
         var errorCode = -1;
         var errorInfo = Dictionary<String, String>();
@@ -1760,20 +1714,17 @@ public class GDataXMLDocument {
             // not a valid node for using XPath
             errorInfo = ["error": "invalid node"];
         }
-        if (array == nil) {
-            error = NSError(domain:"com.google.GDataXML", code:errorCode, userInfo:errorInfo);
+
+        if let array = array {
+            return array
         }
-    
-        return array;
+        else {
+            throw NSError(domain:"com.google.GDataXML", code:errorCode, userInfo:errorInfo)
+        }
     }
     
-    public func firstNodeFor(XPath: String, namespaces: Dictionary<String, String>, error: inout Error?) -> GDataXMLNode? {
-        if let nodes = self.nodesFor(XPath:XPath, namespaces: namespaces, error: &error) {
-            if nodes.count > 0 {
-                return nodes[0];
-            }
-        }
-        return nil;
+    public func firstNode(forXPath XPath: String, namespaces: Dictionary<String, String>) throws -> GDataXMLNode? {
+        return try self.nodes(forXPath: XPath, namespaces: namespaces).first
     }
     
 }

@@ -16,7 +16,7 @@ final class SwiftGDataXML_HTMLTests: XCTestCase {
             XCTFail(error?.localizedDescription ?? "Document should be created")
             return
         }
-        guard let nodes = doc.nodesFor(XPath: "//node[@attr=\"val1\"]", error: &error) else {
+        guard let nodes = doc.nodes(forXPath: "//node[@attr=\"val1\"]", error: &error) else {
             XCTFail(error?.localizedDescription ?? "XPath should fidn a node")
             return
         }
@@ -46,7 +46,7 @@ final class SwiftGDataXML_HTMLTests: XCTestCase {
             XCTFail(error?.localizedDescription ?? "Document should be created")
             return
         }
-        guard let nodes = doc.nodesFor(XPath: "//node[@attr=\"val1\"]", error: &error) else {
+        guard let nodes = doc.nodes(forXPath: "//node[@attr=\"val1\"]", error: &error) else {
             XCTFail(error?.localizedDescription ?? "XPath should fidn a node")
             return
         }
@@ -64,15 +64,15 @@ final class SwiftGDataXML_HTMLTests: XCTestCase {
         
         // XML
         var doc = GDataXMLDocument(xmlString: "<doc/>", error: &error)
-        XCTAssertEqual(doc?.nodesFor(XPath: "//doc", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
-        XCTAssertEqual(doc?.nodesFor(XPath: "/doc", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
-        XCTAssertEqual(doc?.nodesFor(XPath: "doc", error: &error)?.count, 1, "1.1: Works, 1.2: Fails")
+        XCTAssertEqual(doc?.nodes(forXPath: "//doc", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
+        XCTAssertEqual(doc?.nodes(forXPath: "/doc", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
+        XCTAssertEqual(doc?.nodes(forXPath: "doc", error: &error)?.count, 1, "1.1: Works, 1.2: Fails")
         
         // HTML
         doc = GDataXMLDocument(htmlString: "<doc/>", error: &error)
-        XCTAssertEqual(doc?.nodesFor(XPath: "//html", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
-        XCTAssertEqual(doc?.nodesFor(XPath: "/html", error: &error)?.count, 1, "1.1: Fails, 1.2: Fails")
-        XCTAssertEqual(doc?.nodesFor(XPath: "html", error: &error)?.count, 1, "1.1: Fails, 1.2: Fails")
+        XCTAssertEqual(doc?.nodes(forXPath: "//html", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
+        XCTAssertEqual(doc?.nodes(forXPath: "/html", error: &error)?.count, 1, "1.1: Fails, 1.2: Fails")
+        XCTAssertEqual(doc?.nodes(forXPath: "html", error: &error)?.count, 1, "1.1: Fails, 1.2: Fails")
 
     }
     
