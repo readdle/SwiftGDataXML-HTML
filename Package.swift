@@ -10,7 +10,7 @@ let package = Package(
         .library(name: "SwiftGDataXML_HTML", targets: ["SwiftGDataXML_HTML"])
     ],
     dependencies: [
-        .package(url: "https://github.com/readdle/swift-libxml.git", .branch("master"))
+        .package(url: "https://github.com/readdle/swift-libxml.git", .branch("libxml2"))
     ],
     targets: [
         .target(name: "SwiftGDataXML_HTML"),

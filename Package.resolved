@@ -2,11 +2,11 @@
   "object": {
     "pins": [
       {
-        "package": "libxml",
+        "package": "libxml2",
         "repositoryURL": "https://github.com/readdle/swift-libxml.git",
         "state": {
-          "branch": "master",
-          "revision": "acd01fa33b21a017370ff37f1b4bca4ec7a4b343",
+          "branch": "libxml2",
+          "revision": "a200f73597ce7d03d32e7756b86d1b40c41ff46e",
           "version": null
         }
       }
