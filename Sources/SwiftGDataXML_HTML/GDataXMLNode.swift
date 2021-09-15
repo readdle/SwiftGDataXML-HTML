@@ -17,7 +17,12 @@
  */
 
 import Foundation
+
+#if canImport(libxml2)
 import libxml2
+#elseif canImport(libxml)
+import libxml
+#endif
 
 private let kGDataXMLXPathDefaultNamespacePrefix = "_def_ns".cString(using: .utf8)
 private let GDATAXMLNODE_DEFINE_GLOBALS = 1
