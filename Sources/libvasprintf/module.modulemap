@@ -1,0 +1,3 @@
+module libvasprintf [system] {
+    header "libvasprintf.h"
+}
