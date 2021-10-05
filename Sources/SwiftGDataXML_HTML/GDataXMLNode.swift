@@ -24,6 +24,10 @@ import libxml2
 import libxml
 #endif
 
+#if canImport(libvasprintf)
+import libvasprintf
+#endif
+
 private let kGDataXMLXPathDefaultNamespacePrefix = "_def_ns".cString(using: .utf8)
 private let GDATAXMLNODE_DEFINE_GLOBALS = 1
 private let kGDataXMLParseOptions = Int32(XML_PARSE_NOCDATA.rawValue | XML_PARSE_NOBLANKS.rawValue)
