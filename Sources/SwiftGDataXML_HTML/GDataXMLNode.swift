@@ -550,8 +550,8 @@ public class GDataXMLNode: Hashable, NSCopying {
                     if vasprintf(&qname, "%s:%s", vaList) >= 0 {
                         if let qname = qname {
                             str = String(cString: qname)
+                            free(qname)
                         }
-                        free(qname)
                     }
                 }
             }
