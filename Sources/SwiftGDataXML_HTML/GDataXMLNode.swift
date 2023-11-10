@@ -24,9 +24,41 @@ import libxml2
 import libxml
 #endif
 
-#if canImport(libvasprintf)
-import libvasprintf
+private func withVasprintf<R>(_ fmt: UnsafePointer<CChar>!, _ args: [CVarArg], body: (UnsafeMutablePointer<CChar>) -> R) -> R? {
+#if canImport(Darwin)
+    return withVaList(args) { vaList in
+        var buffer: UnsafeMutablePointer<CChar>?
+        guard vasprintf(&buffer, fmt, vaList) >= 0, let buffer = buffer else {
+            return nil
+        }
+        defer {
+            free(buffer)
+        }
+        return body(buffer)
+    }
+#else
+    let length = withVaList(args) { varArgs in
+        return vsnprintf(nil, 0, fmt, varArgs)
+    }
+    guard length >= 0 else {
+        return nil
+    }
+    
+    let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: Int(length + 1))
+    defer {
+        buffer.deallocate()
+    }
+    
+    let result = withVaList(args) { varArgs in
+        return vsnprintf(buffer.baseAddress, buffer.count, fmt, varArgs)
+    }
+    guard result >= 0, let bufferBaseAddress = buffer.baseAddress else {
+        return nil
+    }
+    
+    return body(bufferBaseAddress)
 #endif
+}
 
 private let kGDataXMLXPathDefaultNamespacePrefix = "_def_ns".cString(using: .utf8)
 private let GDATAXMLNODE_DEFINE_GLOBALS = 1
@@ -545,14 +577,8 @@ public class GDataXMLNode: Hashable, NSCopying {
             else if xmlNode.pointee.ns != nil, let prefix = xmlNode.pointee.ns.pointee.prefix {
                 // name of a non-namespace node
                 // has a prefix
-                withVaList([prefix, xmlNode.pointee.name]) { vaList in
-                    var qname: UnsafeMutablePointer<CChar>?
-                    if vasprintf(&qname, "%s:%s", vaList) >= 0 {
-                        if let qname = qname {
-                            str = String(cString: qname)
-                            free(qname)
-                        }
-                    }
+                str = withVasprintf("%s:%s", [prefix, xmlNode.pointee.name]) { qname in
+                    return String(cString: qname)
                 }
             }
             else {
