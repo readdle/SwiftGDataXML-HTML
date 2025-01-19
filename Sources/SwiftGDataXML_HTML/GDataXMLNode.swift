@@ -670,7 +670,7 @@ public class GDataXMLNode: Hashable, NSCopying {
             case XML_NAMESPACE_DECL:        return .namespaceKind
             case XML_XINCLUDE_START:        return .processingInstructionKind
             case XML_XINCLUDE_END:          return .processingInstructionKind
-            #if !os(Windows) // No longer present in 2.11.5
+            #if !os(Windows) && !os(Android) // No longer present in 2.11.5
             case XML_DOCB_DOCUMENT_NODE:    return .documentKind
             #endif
             default:                        return .invalidKind
