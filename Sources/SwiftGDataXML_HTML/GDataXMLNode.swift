@@ -853,21 +853,20 @@ public class GDataXMLElement: GDataXMLNode {
     }
 
     public init(xmlString str: String, recoverOnErrors: Bool = false) throws {
-        guard let utf8Str = str.cString(using: String.Encoding.utf8) else {
-            throw NSError(domain: "com.google.GDataXML", code: -1, userInfo: nil)
-        }
         var xmlNode: xmlNodePtr?
-        // NOTE: We are assuming a string length that fits into an int
-        let flags = recoverOnErrors ? kGDataXMLParseRecoverOptions : kGDataXMLParseOptions
-        if let doc = xmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
-                                   nil, // encoding
-                                   flags) {
-            // copy the root node from the doc
-            if let root = xmlDocGetRootElement(doc) {
-                // 1: recursive
-                xmlNode = xmlCopyNode(root, 1)
+        str.withCString { utf8Str in
+            // NOTE: We are assuming a string length that fits into an int
+            let flags = recoverOnErrors ? kGDataXMLParseRecoverOptions : kGDataXMLParseOptions
+            if let doc = xmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
+                                       nil, // encoding
+                                       flags) {
+                // copy the root node from the doc
+                if let root = xmlDocGetRootElement(doc) {
+                    // 1: recursive
+                    xmlNode = xmlCopyNode(root, 1)
+                }
+                xmlFreeDoc(doc)
             }
-            xmlFreeDoc(doc)
         }
 
         if xmlNode == nil {
@@ -880,19 +879,18 @@ public class GDataXMLElement: GDataXMLNode {
     }
 
     public init(withHTMLString str: String) throws {
-        guard let utf8Str = str.cString(using: String.Encoding.utf8) else {
-            throw NSError(domain: "com.google.GDataXML", code: -1, userInfo: nil)
-        }
         var xmlNode: xmlNodePtr?
-        // NOTE: We are assuming a string length that fits into an int
-        if let doc = htmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
-                                    nil, // encoding
-                                    kGDataHTMLParseOptions) {
-            // copy the root node from the doc
-            if let root = xmlDocGetRootElement(doc) {
-                xmlNode = xmlCopyNode(root, 1) // 1: recursive
+        str.withCString { utf8Str in
+            // NOTE: We are assuming a string length that fits into an int
+            if let doc = htmlReadMemory(utf8Str, Int32(strlen(utf8Str)), nil, // URL
+                                        nil, // encoding
+                                        kGDataHTMLParseOptions) {
+                // copy the root node from the doc
+                if let root = xmlDocGetRootElement(doc) {
+                    xmlNode = xmlCopyNode(root, 1) // 1: recursive
+                }
+                xmlFreeDoc(doc)
             }
-            xmlFreeDoc(doc)
         }
 
         if xmlNode == nil {

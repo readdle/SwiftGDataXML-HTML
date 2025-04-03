@@ -3,7 +3,7 @@ import XCTest
 
 final class SwiftGDataXMLHTMLTests: XCTestCase {
 
-    func testGDataXMLNodeXPathShouldWork() {
+    func testGDataXMLNodeXPathShouldWork() throws {
         let xml = """
             <doc>
                 <node attr="val1"/>
@@ -11,25 +11,18 @@ final class SwiftGDataXMLHTMLTests: XCTestCase {
                 </doc>
             """
 
-        var error: Error?
-        guard let doc = GDataXMLDocument(xmlString: xml, error: &error) else {
-            XCTFail(error?.localizedDescription ?? "Document should be created")
-            return
-        }
-        guard let nodes = doc.nodes(forXPath: "//node[@attr=\"val1\"]", error: &error) else {
-            XCTFail(error?.localizedDescription ?? "XPath should fidn a node")
-            return
-        }
+        let doc = try GDataXMLDocument(xmlString: xml)
+        let nodes = try doc.nodes(forXPath: "//node[@attr=\"val1\"]")
         XCTAssertEqual(nodes.count, 1, "There should be only one node found")
         guard let xmlElement = nodes.first as? GDataXMLElement else {
-            XCTFail(error?.localizedDescription ?? "Wrong node type")
+            XCTFail("Wrong node type")
             return
         }
-        let foundValue = xmlElement.attributeFor(name: "attr")?.stringValue()
+        let foundValue = xmlElement.attribute(forName: "attr")?.stringValue()
         XCTAssertEqual(foundValue, "val1")
     }
 
-    func testGDataXMLNodeXPathForHTMLShouldWork() {
+    func testGDataXMLNodeXPathForHTMLShouldWork() throws {
         let docString = """
             <doc aa>
                 <node attr="val1"/>
@@ -38,45 +31,36 @@ final class SwiftGDataXMLHTMLTests: XCTestCase {
                 </doc>
             """
 
-        var error: Error?
-        let badDoc = GDataXMLDocument(xmlString: docString, error: &error)
+        let badDoc = try? GDataXMLDocument(xmlString: docString)
         XCTAssertNil(badDoc, "String is not valid XML, creating document should fail")
-
-        guard let doc = GDataXMLDocument(htmlString: docString, error: &error) else {
-            XCTFail(error?.localizedDescription ?? "Document should be created")
-            return
-        }
-        guard let nodes = doc.nodes(forXPath: "//node[@attr=\"val1\"]", error: &error) else {
-            XCTFail(error?.localizedDescription ?? "XPath should fidn a node")
-            return
-        }
+        let doc = try GDataXMLDocument(htmlString: docString)
+        let nodes = try doc.nodes(forXPath: "//node[@attr=\"val1\"]")
         XCTAssertEqual(nodes.count, 1, "There should be only one node found")
         guard let xmlElement = nodes.first as? GDataXMLElement else {
-            XCTFail(error?.localizedDescription ?? "Wrong node type")
+            XCTFail("Wrong node type")
             return
         }
-        let foundValue = xmlElement.attributeFor(name: "attr")?.stringValue()
+        let foundValue = xmlElement.attribute(forName: "attr")?.stringValue()
         XCTAssertEqual(foundValue, "val1")
     }
 
-    func testGDataXMLNodeXPathShouldReturnRoot() {
-        var error: Error?
+    func testGDataXMLNodeXPathShouldReturnRoot() throws {
 
         // XML
-        var doc = GDataXMLDocument(xmlString: "<doc/>", error: &error)
-        XCTAssertEqual(doc?.nodes(forXPath: "//doc", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
-        XCTAssertEqual(doc?.nodes(forXPath: "/doc", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
-        XCTAssertEqual(doc?.nodes(forXPath: "doc", error: &error)?.count, 1, "1.1: Works, 1.2: Fails")
+        var doc = try GDataXMLDocument(xmlString: "<doc/>")
+        XCTAssertEqual(try doc.nodes(forXPath: "//doc").count, 1, "1.1: Works, 1.2: Works")
+        XCTAssertEqual(try doc.nodes(forXPath: "/doc").count, 1, "1.1: Works, 1.2: Works")
+        XCTAssertEqual(try doc.nodes(forXPath: "doc").count, 1, "1.1: Works, 1.2: Fails")
 
         // HTML
-        doc = GDataXMLDocument(htmlString: "<doc/>", error: &error)
-        XCTAssertEqual(doc?.nodes(forXPath: "//html", error: &error)?.count, 1, "1.1: Works, 1.2: Works")
-        XCTAssertEqual(doc?.nodes(forXPath: "/html", error: &error)?.count, 1, "1.1: Fails, 1.2: Fails")
-        XCTAssertEqual(doc?.nodes(forXPath: "html", error: &error)?.count, 1, "1.1: Fails, 1.2: Fails")
+        doc = try GDataXMLDocument(htmlString: "<doc/>")
+        XCTAssertEqual(try doc.nodes(forXPath: "//html").count, 1, "1.1: Works, 1.2: Works")
+        XCTAssertEqual(try doc.nodes(forXPath: "/html").count, 1, "1.1: Fails, 1.2: Fails")
+        XCTAssertEqual(try doc.nodes(forXPath: "html").count, 1, "1.1: Fails, 1.2: Fails")
 
     }
 
-    /*func testNSCrash() {
+    /*func testNSCrash() throws {
         let invalidXML = """
             <?xml version="1.0"?> \
                 <!DOCTYPE EXAMPLE SYSTEM "example.dtd" [
@@ -86,9 +70,8 @@ final class SwiftGDataXMLHTMLTests: XCTestCase {
                 &xml;
                 </EXAMPLE>
             """
-        var error: Error? = nil
-        let doc = GDataXMLDocument(xmlString: invalidXML, error: &error)
-        guard let rootElement = doc?.rootElement() else {
+        let doc = try GDataXMLDocument(xmlString: invalidXML)
+        guard let rootElement = doc.rootElement() else {
             XCTFail("No root")
             return
         }
@@ -99,7 +82,7 @@ final class SwiftGDataXMLHTMLTests: XCTestCase {
     func read(_ node: GDataXMLNode) -> [String : Any]? {
         var childs: [[String : Any]] = []
         var content: String? = nil
-        if node.children()?.count == 1 && (node.children()?[0])?.kind() == .TextKind {
+        if node.children()?.count == 1 && (node.children()?[0])?.kind() == .textKind {
             if let children = node.children()?[0] {
                 content = "\(children)".trimmingCharacters(in: CharacterSet.whitespaces)
             }
