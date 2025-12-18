@@ -1,4 +1,4 @@
-// swift-tools-version:5.0
+// swift-tools-version:6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,14 +6,15 @@ import PackageDescription
 let package = Package(
     name: "SwiftGDataXML_HTML",
     products: [
-        // Products define the executables and libraries produced by a package, and make them visible to other packages.
         .library(name: "SwiftGDataXML_HTML", targets: ["SwiftGDataXML_HTML"])
     ],
-    dependencies: [
-        .package(url: "https://github.com/readdle/swift-libxml.git", .exact("0.0.3"))
-    ],
     targets: [
-        .target(name: "SwiftGDataXML_HTML"),
+        .target(name: "libvasprintf"),
+        .target(name: "SwiftGDataXML_HTML",
+                dependencies: ["libvasprintf"],
+                cSettings: [
+                    .define("LIBXML_STATIC", .when(platforms: [.windows])),
+                ]),
         .testTarget(name: "SwiftGDataXML_HTMLTests", dependencies: ["SwiftGDataXML_HTML"])
     ]
 )
