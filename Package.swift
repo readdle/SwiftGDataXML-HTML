@@ -11,7 +11,9 @@ let package = Package(
     targets: [
         .target(name: "libvasprintf"),
         .target(name: "SwiftGDataXML_HTML",
-                dependencies: ["libvasprintf"],
+                dependencies: [
+                    .target(name: "libvasprintf", condition: .when(platforms: [.windows])),
+                ],
                 cSettings: [
                     .define("LIBXML_STATIC", .when(platforms: [.windows])),
                 ]),
