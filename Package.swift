@@ -9,7 +9,14 @@ let package = Package(
         .library(name: "SwiftGDataXML_HTML", targets: ["SwiftGDataXML_HTML"])
     ],
     targets: [
-        .target(name: "SwiftGDataXML_HTML"),
+        .target(name: "libvasprintf"),
+        .target(name: "SwiftGDataXML_HTML",
+                dependencies: [
+                    .target(name: "libvasprintf", condition: .when(platforms: [.windows])),
+                ],
+                cSettings: [
+                    .define("LIBXML_STATIC", .when(platforms: [.windows])),
+                ]),
         .testTarget(name: "SwiftGDataXML_HTMLTests", dependencies: ["SwiftGDataXML_HTML"])
     ],
     swiftLanguageModes: [.v5]

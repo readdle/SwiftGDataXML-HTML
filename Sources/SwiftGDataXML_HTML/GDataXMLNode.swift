@@ -19,7 +19,7 @@
 import Foundation
 
 #if canImport(libxml2)
-import libxml2
+@preconcurrency import libxml2
 #elseif canImport(libxml)
 import libxml
 #endif

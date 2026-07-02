@@ -95,9 +95,4 @@ final class SwiftGDataXMLHTMLTests: XCTestCase {
         return ["tag": node.name() ?? "", "content": childs.count > 0 ? childs : content != nil ? content! : []]
     }*/
 
-    static var allTests = [
-        ("testGDataXMLNodeXPathShouldWork", testGDataXMLNodeXPathShouldWork),
-        ("testGDataXMLNodeXPathForHTMLShouldWork", testGDataXMLNodeXPathForHTMLShouldWork),
-        ("testGDataXMLNodeXPathShouldReturnRoot", testGDataXMLNodeXPathShouldReturnRoot)
-    ]
 }
