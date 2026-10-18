@@ -670,7 +670,7 @@ public class GDataXMLNode: Hashable, NSCopying {
             case XML_NAMESPACE_DECL:        return .namespaceKind
             case XML_XINCLUDE_START:        return .processingInstructionKind
             case XML_XINCLUDE_END:          return .processingInstructionKind
-            #if !os(Windows) && !os(Android) // No longer present in 2.11.5
+            #if !os(Windows) && !os(Android) && !os(Linux) // No longer present in 2.11.5
             case XML_DOCB_DOCUMENT_NODE:    return .documentKind
             #endif
             default:                        return .invalidKind
@@ -1520,7 +1520,7 @@ public class GDataXMLElement: GDataXMLNode {
 }
 
 func IANAEncodingCStringFromNSStringEncoding(_ encoding: String.Encoding) -> String? {
-    #if os(Android) || os(Windows)
+    #if os(Android) || os(Windows) || os(Linux)
         // TODO: SPA-15. Implement CFStringConvertEncodingToIANACharSetName
         // Maybe ICU Charset detection http://userguide.icu-project.org/conversion/detection
         return nil
