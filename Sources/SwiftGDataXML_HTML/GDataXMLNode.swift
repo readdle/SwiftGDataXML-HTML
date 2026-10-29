@@ -24,10 +24,6 @@ import libxml2
 import libxml
 #endif
 
-#if canImport(libvasprintf)
-import libvasprintf
-#endif
-
 private let kGDataXMLXPathDefaultNamespacePrefix = "_def_ns".cString(using: .utf8)
 private let GDATAXMLNODE_DEFINE_GLOBALS = 1
 private let kGDataXMLParseOptions = Int32(XML_PARSE_NOCDATA.rawValue | XML_PARSE_NOBLANKS.rawValue)
@@ -545,15 +541,7 @@ public class GDataXMLNode: Hashable, NSCopying {
             else if xmlNode.pointee.ns != nil, let prefix = xmlNode.pointee.ns.pointee.prefix {
                 // name of a non-namespace node
                 // has a prefix
-                withVaList([prefix, xmlNode.pointee.name]) { vaList in
-                    var qname: UnsafeMutablePointer<CChar>?
-                    if vasprintf(&qname, "%s:%s", vaList) >= 0 {
-                        if let qname = qname {
-                            str = String(cString: qname)
-                            free(qname)
-                        }
-                    }
-                }
+                str = String(cString: prefix) + ":" + String(cString: xmlNode.pointee.name)
             }
             else {
                 // lacks a prefix
