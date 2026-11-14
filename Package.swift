@@ -8,8 +8,16 @@ let package = Package(
     products: [
         .library(name: "SwiftGDataXML_HTML", targets: ["SwiftGDataXML_HTML"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/readdle/swift-libxml.git", branch: "libxml2-unix")
+    ],
     targets: [
-        .target(name: "SwiftGDataXML_HTML"),
+        .target(
+            name: "SwiftGDataXML_HTML",
+            dependencies: [
+                .product(name: "libxml", package: "swift-libxml", condition: .when(platforms: [.linux]))
+            ]
+        ),
         .testTarget(name: "SwiftGDataXML_HTMLTests", dependencies: ["SwiftGDataXML_HTML"])
     ],
     swiftLanguageModes: [.v5]
